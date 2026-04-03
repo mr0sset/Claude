@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #1a1d2e;
+    --bg-card: #1e2235;
+    --bg-hover: #262a40;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0b0;
+    --text-muted: #6b7280;
+    --accent-blue: #4a9eff;
+    --accent-green: #34d399;
+    --accent-red: #f87171;
+    --accent-orange: #fb923c;
+    --accent-purple: #a78bfa;
+    --accent-yellow: #fbbf24;
+    --border-color: #2d3148;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ===== Header ===== */
+header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    letter-spacing: -0.5px;
+}
+
+.api-key-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.api-key-section label {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.api-key-section input {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    width: 220px;
+    font-size: 0.85rem;
+}
+
+.api-key-section button {
+    background: var(--accent-blue);
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.api-key-section button:hover { opacity: 0.85; }
+
+.api-link {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.api-link:hover { text-decoration: underline; }
+
+/* ===== Main ===== */
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* ===== Search ===== */
+.search-section {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.search-container {
+    display: flex;
+    gap: 8px;
+}
+
+.search-container input {
+    flex: 1;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 14px 20px;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.search-container input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+.search-container button {
+    background: var(--accent-blue);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.search-container button:hover { opacity: 0.85; }
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    margin-top: 4px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: var(--shadow);
+}
+
+.search-result-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.15s;
+}
+
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--bg-hover); }
+
+.search-result-item .name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.search-result-item .ticker {
+    color: var(--accent-blue);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.search-result-item .exchange {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+
+/* ===== Loading ===== */
+.loading {
+    text-align: center;
+    padding: 48px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading p { color: var(--text-secondary); }
+
+/* ===== Company Header ===== */
+.company-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.company-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.company-info h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.ticker-badge {
+    background: var(--accent-blue);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.exchange-badge {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.sector-badge {
+    background: rgba(167, 139, 250, 0.15);
+    color: var(--accent-purple);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.price-info {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.current-price {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.price-change {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.price-change.positive {
+    background: rgba(52, 211, 153, 0.15);
+    color: var(--accent-green);
+}
+
+.price-change.negative {
+    background: rgba(248, 113, 113, 0.15);
+    color: var(--accent-red);
+}
+
+/* ===== Cards ===== */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+
+.card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.card-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+}
+
+/* ===== Enterprise Value ===== */
+.ev-grid {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.ev-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    min-width: 150px;
+    text-align: center;
+    flex: 1;
+    position: relative;
+}
+
+.ev-item.highlight-blue { border-left: 4px solid var(--accent-blue); }
+.ev-item.highlight-red { border-left: 4px solid var(--accent-red); }
+.ev-item.highlight-green { border-left: 4px solid var(--accent-green); }
+.ev-item.highlight-orange { border-left: 4px solid var(--accent-orange); }
+.ev-item.highlight-purple { border-left: 4px solid var(--accent-purple); }
+
+.ev-item.ev-total {
+    background: rgba(74, 158, 255, 0.1);
+    border: 2px solid var(--accent-blue);
+    border-left: 4px solid var(--accent-blue);
+}
+
+.ev-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.ev-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.ev-source {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-style: italic;
+}
+
+.ev-operator {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    padding: 0 4px;
+}
+
+/* ===== Chart ===== */
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+
+/* ===== Financials Table ===== */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#financialsTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    white-space: nowrap;
+}
+
+#financialsTable thead tr {
+    border-bottom: 2px solid var(--border-color);
+}
+
+#financialsTable th {
+    padding: 10px 16px;
+    text-align: right;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#financialsTable th:first-child {
+    text-align: left;
+    min-width: 180px;
+}
+
+#financialsTable th.forecast {
+    color: var(--accent-yellow);
+    position: relative;
+}
+
+#financialsTable th.forecast::after {
+    content: ' (F)';
+    font-size: 0.7rem;
+}
+
+#financialsTable td {
+    padding: 10px 16px;
+    text-align: right;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#financialsTable td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+#financialsTable tr.section-header td {
+    background: var(--bg-secondary);
+    font-weight: 700;
+    color: var(--accent-blue);
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    padding: 8px 16px;
+}
+
+#financialsTable tr.metric-row td {
+    color: var(--text-primary);
+}
+
+#financialsTable tr.derived-row td {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-style: italic;
+}
+
+#financialsTable tr.metric-row:hover td,
+#financialsTable tr.derived-row:hover td {
+    background: var(--bg-hover);
+}
+
+#financialsTable td.forecast-cell {
+    color: var(--accent-yellow);
+    background: rgba(251, 191, 36, 0.04);
+}
+
+#financialsTable td.positive { color: var(--accent-green); }
+#financialsTable td.negative { color: var(--accent-red); }
+
+/* ===== Utility ===== */
+.hidden { display: none !important; }
+
+/* ===== Footer ===== */
+footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 32px;
+}
+
+footer a { color: var(--accent-blue); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .ev-grid {
+        flex-direction: column;
+    }
+
+    .ev-operator {
+        transform: rotate(90deg);
+        font-size: 1.2rem;
+    }
+
+    .ev-item { min-width: 100%; }
+
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .company-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Stock Analysis Tool</h1>
+        <div class="api-key-section">
+            <label for="apiKey">FMP API Key:</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key">
+            <button id="saveKeyBtn" onclick="saveApiKey()">Save</button>
+            <a href="https://financialmodelingprep.com/developer/docs/" target="_blank" class="api-link">Get free key</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search by company name or ticker..." autocomplete="off">
+                <button id="searchBtn" onclick="searchCompany()">Search</button>
+            </div>
+            <div id="searchResults" class="search-results hidden"></div>
+        </section>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Loading analysis...</p>
+        </div>
+
+        <!-- Company Header -->
+        <section id="companyHeader" class="company-header hidden">
+            <div class="company-info">
+                <h2 id="companyName"></h2>
+                <span id="companyTicker" class="ticker-badge"></span>
+                <span id="companyExchange" class="exchange-badge"></span>
+                <span id="companySector" class="sector-badge"></span>
+            </div>
+            <div class="price-info">
+                <span id="currentPrice" class="current-price"></span>
+                <span id="priceChange" class="price-change"></span>
+            </div>
+        </section>
+
+        <!-- Enterprise Value Section -->
+        <section id="evSection" class="card hidden">
+            <h3>Enterprise Value Breakdown</h3>
+            <p class="card-subtitle">Current enterprise value with sourced components</p>
+            <div class="ev-grid">
+                <div class="ev-item highlight-blue">
+                    <div class="ev-label">Market Capitalization</div>
+                    <div class="ev-value" id="evMarketCap">-</div>
+                    <div class="ev-source" id="evMarketCapSource"></div>
+                </div>
+                <div class="ev-operator">+</div>
+                <div class="ev-item highlight-red">
+                    <div class="ev-label">Total Debt</div>
+                    <div class="ev-value" id="evTotalDebt">-</div>
+                    <div class="ev-source" id="evTotalDebtSource"></div>
+                </div>
+                <div class="ev-operator">-</div>
+                <div class="ev-item highlight-green">
+                    <div class="ev-label">Cash & Equivalents</div>
+                    <div class="ev-value" id="evCash">-</div>
+                    <div class="ev-source" id="evCashSource"></div>
+                </div>
+                <div class="ev-operator">+</div>
+                <div class="ev-item highlight-orange">
+                    <div class="ev-label">Minority Interest</div>
+                    <div class="ev-value" id="evMinority">-</div>
+                    <div class="ev-source" id="evMinoritySource"></div>
+                </div>
+                <div class="ev-operator">+</div>
+                <div class="ev-item highlight-purple">
+                    <div class="ev-label">Preferred Stock</div>
+                    <div class="ev-value" id="evPreferred">-</div>
+                    <div class="ev-source" id="evPreferredSource"></div>
+                </div>
+                <div class="ev-operator">=</div>
+                <div class="ev-item ev-total">
+                    <div class="ev-label">Enterprise Value</div>
+                    <div class="ev-value" id="evTotal">-</div>
+                    <div class="ev-source" id="evTotalSource"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stock Price Chart -->
+        <section id="chartSection" class="card hidden">
+            <h3>Share Price Development (5 Years)</h3>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Key Financials -->
+        <section id="financialsSection" class="card hidden">
+            <h3>Key Financials</h3>
+            <p class="card-subtitle">Historical (5 years) and forecast data. All values in millions.</p>
+            <div class="table-wrapper">
+                <table id="financialsTable">
+                    <thead>
+                        <tr id="financialsHeader"></tr>
+                    </thead>
+                    <tbody id="financialsBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Data provided by <a href="https://financialmodelingprep.com" target="_blank">Financial Modeling Prep</a>. All figures in USD unless stated otherwise.</p>
+    </footer>
+
+    <script>
+// ===== Configuration =====
+const BASE_URL = 'https://financialmodelingprep.com/api/v3';
+let API_KEY = localStorage.getItem('fmp_api_key') || '';
+let priceChart = null;
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+    const keyInput = document.getElementById('apiKey');
+    if (API_KEY) {
+        keyInput.value = API_KEY;
+        keyInput.placeholder = 'Key saved';
+    }
+
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchCompany();
+    });
+
+    // Debounced live search
+    let debounceTimer;
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            hideSearchResults();
+            return;
+        }
+        debounceTimer = setTimeout(() => liveSearch(query), 300);
+    });
+
+    // Close search results on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-section')) {
+            hideSearchResults();
+        }
+    });
+});
+
+// ===== API Key =====
+function saveApiKey() {
+    API_KEY = document.getElementById('apiKey').value.trim();
+    if (API_KEY) {
+        localStorage.setItem('fmp_api_key', API_KEY);
+        document.getElementById('saveKeyBtn').textContent = 'Saved!';
+        setTimeout(() => {
+            document.getElementById('saveKeyBtn').textContent = 'Save';
+        }, 2000);
+    }
+}
+
+// ===== API Helper =====
+async function fetchAPI(endpoint) {
+    if (!API_KEY) {
+        alert('Please enter your Financial Modeling Prep API key first.');
+        throw new Error('No API key');
+    }
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${BASE_URL}${endpoint}${separator}apikey=${API_KEY}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+}
+
+// ===== Search =====
+async function liveSearch(query) {
+    try {
+        const results = await fetchAPI(`/search?query=${encodeURIComponent(query)}&limit=10`);
+        displaySearchResults(results);
+    } catch (err) {
+        // Silently fail for live search
+    }
+}
+
+function searchCompany() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    liveSearch(query);
+}
+
+function displaySearchResults(results) {
+    const container = document.getElementById('searchResults');
+    if (!results || results.length === 0) {
+        container.innerHTML = '<div class="search-result-item"><span class="name">No results found</span></div>';
+        container.classList.remove('hidden');
+        return;
+    }
+
+    // Filter to stocks only
+    const stocks = results.filter(r =>
+        r.stockExchange && !r.symbol.includes('.')
+    ).slice(0, 8);
+
+    if (stocks.length === 0) {
+        container.innerHTML = '<div class="search-result-item"><span class="name">No stock results found</span></div>';
+        container.classList.remove('hidden');
+        return;
+    }
+
+    container.innerHTML = stocks.map(r => `
+        <div class="search-result-item" onclick="selectCompany('${r.symbol}')">
+            <span class="name">${r.name}</span>
+            <span>
+                <span class="ticker">${r.symbol}</span>
+                <span class="exchange">${r.stockExchange || ''}</span>
+            </span>
+        </div>
+    `).join('');
+    container.classList.remove('hidden');
+}
+
+function hideSearchResults() {
+    document.getElementById('searchResults').classList.add('hidden');
+}
+
+// ===== Main Analysis =====
+async function selectCompany(ticker) {
+    hideSearchResults();
+    document.getElementById('searchInput').value = ticker;
+
+    // Show loading, hide all sections
+    show('loading');
+    hide('companyHeader');
+    hide('evSection');
+    hide('chartSection');
+    hide('financialsSection');
+
+    try {
+        // Fetch all data in parallel
+        const [
+            quoteData,
+            profileData,
+            historicalData,
+            incomeData,
+            balanceData,
+            estimatesData,
+            evData
+        ] = await Promise.all([
+            fetchAPI(`/quote/${ticker}`),
+            fetchAPI(`/profile/${ticker}`),
+            fetchAPI(`/historical-price-full/${ticker}?timeseries=1825`),
+            fetchAPI(`/income-statement/${ticker}?period=annual&limit=5`),
+            fetchAPI(`/balance-sheet-statement/${ticker}?period=annual&limit=5`),
+            fetchAPI(`/analyst-estimates/${ticker}?limit=3`).catch(() => []),
+            fetchAPI(`/enterprise-values/${ticker}?period=annual&limit=1`).catch(() => [])
+        ]);
+
+        hide('loading');
+
+        // Render all sections
+        renderCompanyHeader(quoteData[0], profileData[0]);
+        renderEnterpriseValue(quoteData[0], balanceData[0], profileData[0], evData);
+        renderPriceChart(historicalData, ticker);
+        renderFinancials(incomeData, balanceData, estimatesData);
+
+    } catch (err) {
+        hide('loading');
+        console.error('Analysis failed:', err);
+        alert(`Failed to load data for ${ticker}. Check your API key and try again.\n\nError: ${err.message}`);
+    }
+}
+
+// ===== Company Header =====
+function renderCompanyHeader(quote, profile) {
+    if (!quote) return;
+
+    document.getElementById('companyName').textContent = profile?.companyName || quote.name || '';
+    document.getElementById('companyTicker').textContent = quote.symbol || '';
+    document.getElementById('companyExchange').textContent = quote.exchange || profile?.exchangeShortName || '';
+    document.getElementById('companySector').textContent = profile?.sector || '';
+
+    document.getElementById('currentPrice').textContent = formatCurrency(quote.price);
+
+    const changeEl = document.getElementById('priceChange');
+    const pct = quote.changesPercentage;
+    changeEl.textContent = `${pct >= 0 ? '+' : ''}${pct?.toFixed(2)}%`;
+    changeEl.className = `price-change ${pct >= 0 ? 'positive' : 'negative'}`;
+
+    show('companyHeader');
+}
+
+// ===== Enterprise Value =====
+function renderEnterpriseValue(quote, balance, profile, evData) {
+    if (!quote || !balance) return;
+
+    const marketCap = quote.marketCap || (quote.price * (quote.sharesOutstanding || profile?.sharesOutstanding || 0));
+    const totalDebt = (balance.longTermDebt || 0) + (balance.shortTermDebt || 0);
+    const cash = balance.cashAndCashEquivalents || balance.cashAndShortTermInvestments || 0;
+    const minority = balance.minorityInterest || 0;
+    const preferred = balance.preferredStock || 0;
+    const ev = marketCap + totalDebt - cash + minority + preferred;
+
+    const balanceDate = balance.date ? ` (${balance.date.substring(0, 10)})` : '';
+    const quoteSource = 'Source: Real-time quote';
+    const balanceSource = `Source: Balance sheet${balanceDate}`;
+
+    setValue('evMarketCap', formatLargeNumber(marketCap));
+    setValue('evMarketCapSource', `${quoteSource} | Price $${quote.price?.toFixed(2)} x ${formatLargeNumber(quote.sharesOutstanding || profile?.sharesOutstanding || 0, true)} shares`);
+
+    setValue('evTotalDebt', formatLargeNumber(totalDebt));
+    setValue('evTotalDebtSource', `${balanceSource} | LT: ${formatLargeNumber(balance.longTermDebt || 0)} + ST: ${formatLargeNumber(balance.shortTermDebt || 0)}`);
+
+    setValue('evCash', formatLargeNumber(cash));
+    setValue('evCashSource', balanceSource);
+
+    setValue('evMinority', formatLargeNumber(minority));
+    setValue('evMinoritySource', balanceSource);
+
+    setValue('evPreferred', formatLargeNumber(preferred));
+    setValue('evPreferredSource', balanceSource);
+
+    setValue('evTotal', formatLargeNumber(ev));
+
+    // Compare with FMP's EV if available
+    if (evData && evData.length > 0) {
+        const fmpEv = evData[0].enterpriseValue;
+        setValue('evTotalSource', `Calculated: ${formatLargeNumber(ev)} | FMP reported: ${formatLargeNumber(fmpEv)}`);
+    } else {
+        setValue('evTotalSource', 'Calculated from components above');
+    }
+
+    show('evSection');
+}
+
+// ===== Price Chart =====
+function renderPriceChart(data, ticker) {
+    if (!data || !data.historical || data.historical.length === 0) return;
+
+    const historical = data.historical
+        .slice()
+        .reverse()
+        .map(d => ({
+            x: new Date(d.date),
+            y: d.close
+        }));
+
+    const ctx = document.getElementById('priceChart').getContext('2d');
+
+    if (priceChart) {
+        priceChart.destroy();
+    }
+
+    // Determine color based on trend
+    const firstPrice = historical[0]?.y || 0;
+    const lastPrice = historical[historical.length - 1]?.y || 0;
+    const isPositive = lastPrice >= firstPrice;
+    const lineColor = isPositive ? '#34d399' : '#f87171';
+    const bgColor = isPositive ? 'rgba(52, 211, 153, 0.08)' : 'rgba(248, 113, 113, 0.08)';
+
+    priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: `${ticker} Close Price`,
+                data: historical,
+                borderColor: lineColor,
+                backgroundColor: bgColor,
+                borderWidth: 2,
+                fill: true,
+                pointRadius: 0,
+                pointHitRadius: 10,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: '#1e2235',
+                    titleColor: '#e8eaed',
+                    bodyColor: '#e8eaed',
+                    borderColor: '#2d3148',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: (items) => {
+                            const date = new Date(items[0].parsed.x);
+                            return date.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+                        },
+                        label: (item) => `$${item.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'month',
+                        displayFormats: { month: 'MMM yyyy' }
+                    },
+                    grid: {
+                        color: 'rgba(45, 49, 72, 0.5)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7280',
+                        maxTicksLimit: 12,
+                        font: { size: 11 }
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(45, 49, 72, 0.5)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7280',
+                        font: { size: 11 },
+                        callback: (value) => '$' + value.toFixed(0)
+                    }
+                }
+            }
+        }
+    });
+
+    show('chartSection');
+}
+
+// ===== Key Financials =====
+function renderFinancials(incomeStatements, balanceSheets, estimates) {
+    if (!incomeStatements || incomeStatements.length === 0) return;
+
+    // Sort historical data oldest first
+    const income = incomeStatements.slice().reverse();
+    const balance = balanceSheets.slice().reverse();
+
+    // Build year headers
+    const headerRow = document.getElementById('financialsHeader');
+    headerRow.innerHTML = '<th>Metric</th>';
+
+    const years = income.map(i => i.calendarYear || i.date?.substring(0, 4) || '');
+    years.forEach(y => {
+        headerRow.innerHTML += `<th>${y}</th>`;
+    });
+
+    // Add forecast years
+    const forecastYears = [];
+    if (estimates && estimates.length > 0) {
+        const sortedEstimates = estimates
+            .filter(e => {
+                const ey = e.date?.substring(0, 4);
+                return ey && !years.includes(ey);
+            })
+            .sort((a, b) => a.date?.localeCompare(b.date));
+
+        sortedEstimates.forEach(e => {
+            const ey = e.date?.substring(0, 4);
+            if (ey) {
+                forecastYears.push(ey);
+                headerRow.innerHTML += `<th class="forecast">${ey}</th>`;
+            }
+        });
+    }
+
+    const tbody = document.getElementById('financialsBody');
+    tbody.innerHTML = '';
+
+    // Helper to build rows
+    function addSectionHeader(label) {
+        const tr = document.createElement('tr');
+        tr.className = 'section-header';
+        const cols = 1 + years.length + forecastYears.length;
+        tr.innerHTML = `<td colspan="${cols}">${label}</td>`;
+        tbody.appendChild(tr);
+    }
+
+    function addMetricRow(label, values, forecastValues, opts = {}) {
+        const tr = document.createElement('tr');
+        tr.className = opts.derived ? 'derived-row' : 'metric-row';
+
+        let html = `<td>${label}</td>`;
+        values.forEach(v => {
+            const cls = opts.colorize ? getColorClass(v) : '';
+            html += `<td class="${cls}">${formatTableValue(v, opts)}</td>`;
+        });
+        forecastValues.forEach(v => {
+            const cls = opts.colorize ? getColorClass(v) : '';
+            html += `<td class="forecast-cell ${cls}">${formatTableValue(v, opts)}</td>`;
+        });
+
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+    }
+
+    // Extract historical data
+    const revenue = income.map(i => i.revenue);
+    const grossProfit = income.map(i => i.grossProfit);
+    const ebitda = income.map(i => i.ebitda);
+    const ebit = income.map(i => i.operatingIncome);
+
+    // Growth rates
+    const revenueGrowth = revenue.map((r, i) => i === 0 ? null : (r - revenue[i - 1]) / Math.abs(revenue[i - 1]));
+    const grossMargin = revenue.map((r, i) => r ? grossProfit[i] / r : null);
+    const ebitdaMargin = revenue.map((r, i) => r ? ebitda[i] / r : null);
+    const ebitMargin = revenue.map((r, i) => r ? ebit[i] / r : null);
+
+    // Capital employed = Total Assets - Current Liabilities
+    const capitalEmployed = balance.map(b => {
+        const totalAssets = b.totalAssets || 0;
+        const currentLiab = b.totalCurrentLiabilities || 0;
+        return totalAssets - currentLiab;
+    });
+
+    // Forecast data
+    const sortedEstimates = (estimates || [])
+        .filter(e => {
+            const ey = e.date?.substring(0, 4);
+            return ey && !years.includes(ey);
+        })
+        .sort((a, b) => a.date?.localeCompare(b.date));
+
+    const fRevenue = sortedEstimates.map(e => e.estimatedRevenueAvg);
+    const fEbitda = sortedEstimates.map(e => e.estimatedEbitdaAvg);
+    const fEbit = sortedEstimates.map(e => e.estimatedEbitAvg);
+    const fNetIncome = sortedEstimates.map(e => e.estimatedNetIncomeAvg);
+
+    // Forecast growth & margins
+    const lastRevenue = revenue[revenue.length - 1];
+    const fRevenueGrowth = fRevenue.map((r, i) => {
+        const prev = i === 0 ? lastRevenue : fRevenue[i - 1];
+        return prev ? (r - prev) / Math.abs(prev) : null;
+    });
+    const fEbitdaMargin = fRevenue.map((r, i) => r && fEbitda[i] ? fEbitda[i] / r : null);
+    const fEbitMargin = fRevenue.map((r, i) => r && fEbit[i] ? fEbit[i] / r : null);
+
+    // Render rows
+    addSectionHeader('Revenue');
+    addMetricRow('Sales', revenue.map(v => v / 1e6), fRevenue.map(v => v ? v / 1e6 : null), { suffix: 'M' });
+    addMetricRow('Growth %', revenueGrowth, fRevenueGrowth, { derived: true, pct: true, colorize: true });
+
+    addSectionHeader('Profitability');
+    addMetricRow('Gross Profit', grossProfit.map(v => v / 1e6), [], { suffix: 'M' });
+    addMetricRow('Margin %', grossMargin, [], { derived: true, pct: true });
+    addMetricRow('EBITDA', ebitda.map(v => v / 1e6), fEbitda.map(v => v ? v / 1e6 : null), { suffix: 'M' });
+    addMetricRow('Margin %', ebitdaMargin, fEbitdaMargin, { derived: true, pct: true });
+    addMetricRow('EBIT', ebit.map(v => v / 1e6), fEbit.map(v => v ? v / 1e6 : null), { suffix: 'M' });
+    addMetricRow('Margin %', ebitMargin, fEbitMargin, { derived: true, pct: true });
+
+    addSectionHeader('Capital');
+    addMetricRow('Capital Employed', capitalEmployed.map(v => v / 1e6), [], { suffix: 'M' });
+
+    show('financialsSection');
+}
+
+// ===== Formatting Helpers =====
+function formatCurrency(value) {
+    if (value == null) return '-';
+    return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatLargeNumber(value, isCount) {
+    if (value == null) return '-';
+    const abs = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+
+    if (abs >= 1e12) return sign + '$' + (abs / 1e12).toFixed(2) + 'T';
+    if (abs >= 1e9) return sign + '$' + (abs / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return sign + '$' + (abs / 1e6).toFixed(1) + 'M';
+    if (abs >= 1e3) return sign + '$' + (abs / 1e3).toFixed(1) + 'K';
+    return sign + '$' + abs.toFixed(0);
+}
+
+function formatTableValue(value, opts = {}) {
+    if (value == null || isNaN(value)) return '-';
+    if (opts.pct) return (value * 100).toFixed(1) + '%';
+    return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+function getColorClass(value) {
+    if (value == null || isNaN(value)) return '';
+    return value >= 0 ? 'positive' : 'negative';
+}
+
+// ===== DOM Helpers =====
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function setValue(id, text) { document.getElementById(id).textContent = text; }
+    </script>
+</body>
+</html>
