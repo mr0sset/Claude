@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Stock Analysis Tool</h1>
+        <div class="api-key-section">
+            <label for="apiKey">FMP API Key:</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key">
+            <button id="saveKeyBtn" onclick="saveApiKey()">Save</button>
+            <a href="https://financialmodelingprep.com/developer/docs/" target="_blank" class="api-link">Get free key</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search by company name or ticker..." autocomplete="off">
+                <button id="searchBtn" onclick="searchCompany()">Search</button>
+            </div>
+            <div id="searchResults" class="search-results hidden"></div>
+        </section>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Loading analysis...</p>
+        </div>
+
+        <!-- Company Header -->
+        <section id="companyHeader" class="company-header hidden">
+            <div class="company-info">
+                <h2 id="companyName"></h2>
+                <span id="companyTicker" class="ticker-badge"></span>
+                <span id="companyExchange" class="exchange-badge"></span>
+                <span id="companySector" class="sector-badge"></span>
+            </div>
+            <div class="price-info">
+                <span id="currentPrice" class="current-price"></span>
+                <span id="priceChange" class="price-change"></span>
+            </div>
+        </section>
+
+        <!-- Enterprise Value Section -->
+        <section id="evSection" class="card hidden">
+            <h3>Enterprise Value Breakdown</h3>
+            <p class="card-subtitle">Current enterprise value with sourced components</p>
+            <div class="ev-grid">
+                <div class="ev-item highlight-blue">
+                    <div class="ev-label">Market Capitalization</div>
+                    <div class="ev-value" id="evMarketCap">-</div>
+                    <div class="ev-source" id="evMarketCapSource"></div>
+                </div>
+                <div class="ev-operator">+</div>
+                <div class="ev-item highlight-red">
+                    <div class="ev-label">Total Debt</div>
+                    <div class="ev-value" id="evTotalDebt">-</div>
+                    <div class="ev-source" id="evTotalDebtSource"></div>
+                </div>
+                <div class="ev-operator">-</div>
+                <div class="ev-item highlight-green">
+                    <div class="ev-label">Cash & Equivalents</div>
+                    <div class="ev-value" id="evCash">-</div>
+                    <div class="ev-source" id="evCashSource"></div>
+                </div>
+                <div class="ev-operator">+</div>
+                <div class="ev-item highlight-orange">
+                    <div class="ev-label">Minority Interest</div>
+                    <div class="ev-value" id="evMinority">-</div>
+                    <div class="ev-source" id="evMinoritySource"></div>
+                </div>
+                <div class="ev-operator">+</div>
+                <div class="ev-item highlight-purple">
+                    <div class="ev-label">Preferred Stock</div>
+                    <div class="ev-value" id="evPreferred">-</div>
+                    <div class="ev-source" id="evPreferredSource"></div>
+                </div>
+                <div class="ev-operator">=</div>
+                <div class="ev-item ev-total">
+                    <div class="ev-label">Enterprise Value</div>
+                    <div class="ev-value" id="evTotal">-</div>
+                    <div class="ev-source" id="evTotalSource"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stock Price Chart -->
+        <section id="chartSection" class="card hidden">
+            <h3>Share Price Development (5 Years)</h3>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Key Financials -->
+        <section id="financialsSection" class="card hidden">
+            <h3>Key Financials</h3>
+            <p class="card-subtitle">Historical (5 years) and forecast data. All values in millions.</p>
+            <div class="table-wrapper">
+                <table id="financialsTable">
+                    <thead>
+                        <tr id="financialsHeader"></tr>
+                    </thead>
+                    <tbody id="financialsBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Data provided by <a href="https://financialmodelingprep.com" target="_blank">Financial Modeling Prep</a>. All figures in USD unless stated otherwise.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
